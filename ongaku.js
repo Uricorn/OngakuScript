@@ -82,6 +82,10 @@ var Youtube = {
       color: "#424242",
       background: "#f3e115"
     },
+    unknown: {
+      color: "#424242",
+      background: "#f8b2ea"
+    },    
     warning: {
       color: "#424242",
       background: "#ffdd6f"
@@ -90,7 +94,7 @@ var Youtube = {
   messages: {
     unknown: {
       text: 'Unknown',
-      type: 'softWarning'
+      type: 'unknown'
     },
     banned: {
       text: 'Banned',
