@@ -73,6 +73,7 @@ var Cache = {
 var Youtube = {
   styles: {
     information: {
+      color: "#120c0c",
       background: "#aa74ff"
     },
     error: {
