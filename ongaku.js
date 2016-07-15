@@ -124,10 +124,9 @@ var Youtube = {
     }
   },
   insertCheckButton: function() {
-    var checkButton = $('<a class="yt-uix-button yt-uix-sessionlink yt-uix-button-default yt-uix-button-size-default" id="check-btn"><span class="yt-uix-button-content">Check</span></a>');
+    var checkButton = $('<a class="yt-uix-button yt-uix-sessionlink yt-uix-button-default yt-uix-button-size-default" id="check-btn"><span class="yt-uix-button-content" style="vertical-align: middle;>Check</span></a>');
 
     checkButton.css( {
-      verticalAlign: "middle",
       marginRight: "10px",
       paddingLeft: "15px",
       paddingRight: "15px"
