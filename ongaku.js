@@ -80,15 +80,15 @@ var Youtube = {
       background: "#c42e3b"
     },
     softWarning: {
-      color: "#424242",
+      color: "#120c0c",
       background: "#f3e115"
     },
     unknown: {
-      color: "#424242",
+      color: "#120c0c",
       background: "#f8b2ea"
     },    
     warning: {
-      color: "#424242",
+      color: "#120c0c",
       background: "#ffdd6f"
     }
   },
