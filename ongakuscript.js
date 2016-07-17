@@ -152,9 +152,6 @@ var Youtube = {
     ]
 
     $(selectors.join(',')).each(function(i, elem) {
-      // Ignore the "Recommended for you" videos in related videos
-      if ($(elem).find('.view-count').text().startsWith('Recommended for you'))
-        return;
 
       var id = elem.href.match(/watch\?v=([^&]*)/)[1];
       songs.push({id: id, elem: elem});
