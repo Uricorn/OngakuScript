@@ -52,7 +52,7 @@ var Cache = {
       return obj;
     }, {});
   },
-  storeResults: function(results, expiration, callback) {
+  storeResults: function(results, expiration) {
     if (!this.storageAvailable)
       return;
 
@@ -67,7 +67,6 @@ var Cache = {
       result.expiration = Date.now() + expiration;
       storage.setItem(id, JSON.stringify(result));
     }
-    callback();
   },
   filterUncached: function(IDs) {
     if (!this.storageAvailable)
@@ -442,16 +441,13 @@ Youtube.insertCheckButton().on('click', function() {
     Youtube.checkRestrictions(IDChunk, function(results) {
       Youtube.insertLabels(elems, IDs, results);
 
-      Cache.storeResults(results, 604800000, function() { // 1 week
+      Cache.storeResults(results, 604800000) // 1 week
+      IDsToCheck = Youtube.filterResults(IDChunk, results);
 
-        IDsToCheck = Youtube.filterResults(IDChunk, results);
+      Youtube.checkStatus(IDsToCheck, function(results) {
+        Youtube.insertLabels(elems, IDs, results);
 
-        Youtube.checkStatus(IDsToCheck, function(results) {
-          Youtube.insertLabels(elems, IDs, results);
-
-          Cache.storeResults(results, 86400000, function(){}) // 24 hours
-
-        });
+        Cache.storeResults(results, 86400000); // 24 hours
       });
     });
   });
