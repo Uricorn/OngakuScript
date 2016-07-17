@@ -324,7 +324,7 @@ var Youtube = {
 
     if (payload.length > 0) {
       $.post(
-        'https://i.animemusic.me/animemusic/check.php?dj=6142984',
+        'https://i.animemusic.me/animemusic/check.php?dj=-1&source=ongakuscript',
         JSON.stringify(payload),
         function(response) {
           this.parseStatus(response, IDs, callback);
