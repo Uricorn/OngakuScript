@@ -198,7 +198,7 @@ var Templates = {
       padding: "4px 8px",
       borderRadius: "4px",
       verticalAlign: "bottom",
-      maxWidth: "200px",
+      maxWidth: "250px",
       textAlign: "center"
     }
   },
