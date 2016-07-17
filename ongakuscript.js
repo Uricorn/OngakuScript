@@ -159,7 +159,7 @@ var Templates = {
     labelNormal: {
       fontSize: "11px",
       marginTop: "4px",
-      padding: "2px 4px",
+      padding: "2px 6px",
       color: "white",
       borderRadius: "3px",
       display: "inline-block",
