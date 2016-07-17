@@ -12,65 +12,86 @@ var Cache = {
     }
   },
   clearExpired: function() {
+    if (!this.storageAvailable)
+      return;
+
     var storage = window.localStorage;
-    if (this.storageAvailable) {
-      for(var key in storage) {
-        var item = JSON.parse(storage.getItem(key));
-        if (item !== null) {
-          if (Date.now() > item.expiration)
-            storage.removeItem(key);
-        }
+
+    for(var key in storage) {
+      var item = storage.getItem(key);
+      if (item !== null) {
+        var video = JSON.parse(item);
+        if (Date.now() > video.expiration)
+          storage.removeItem(key);
       }
     }
   },
   clearAll: function() {
-    var storage = window.localStorage;
-    if (this.storageAvailable) {
-      for(var key in storage) {
-        var item = JSON.parse(storage.getItem(key));
-        if (item !== null) {
-          if(item.expiration !== null)
-            storage.removeItem(key);
-        }
-      }
-    }
-  },
-  getUncached: function(videos) {
-    var uncached = [];
-
-    for(var i in videos) {
-      if (!this.get(videos[i].id)) {
-        uncached.push(videos[i].id);
-      }
-    }
-    return uncached;
-  },
-  put: function(key, value) {
-    if (this.storageAvailable) {
-      var storage = window.localStorage;
-      value.expiration = Date.now() + 86400000; // 24 hours expiration
-      storage.setItem(key, JSON.stringify(value));
-    }
-  },
-  get: function(key) {
     if (!this.storageAvailable)
-      return false;
+      return;
 
     var storage = window.localStorage;
-    var obj = JSON.parse(storage.getItem(key));
 
-    if (obj) {
-      if (Date.now() > obj.expiration) {
+    for(var key in storage) {
+      var item = storage.getItem(key);
+
+      if (item !== null && !key.startsWith("yt") && !key.startsWith("google"))
         storage.removeItem(key);
-        return false;
-      }
-      return obj;
     }
-    return false;
+  },
+  getResults: function(IDs) {
+    if (!this.storageAvailable)
+      return [];
+
+    var storage = window.localStorage;
+
+    return IDs.reduce(function(obj, id) {
+      var item = storage.getItem(id);
+      if (item !== null)
+        obj[id] = JSON.parse(storage.getItem(id));
+      return obj;
+    }, {});
+  },
+  storeResults: function(results, expiration, callback) {
+    if (!this.storageAvailable)
+      return;
+
+    var storage = window.localStorage;
+
+    for(var id in results) {
+      var result = results[id];
+
+      if (result.b && result.b == 1)
+        expiration = 604800000;
+
+      result.expiration = Date.now() + expiration;
+      storage.setItem(id, JSON.stringify(result));
+    }
+    callback();
+  },
+  filterUncached: function(IDs) {
+    if (!this.storageAvailable)
+      return;
+
+    var storage = window.localStorage;
+
+    return IDs.filter(function(id) {
+      return storage.getItem(id) !== null;
+    });
+  },
+  getUncached: function(IDs) {
+    if (!this.storageAvailable)
+      return;
+
+    var storage = window.localStorage;
+
+    return IDs.filter(function(id) {
+      return storage.getItem(id) == null;
+    });
   }
 };
 
-var Youtube = {
+var Templates = {
   styles: {
     information: {
       color: "#120c0c",
@@ -86,7 +107,7 @@ var Youtube = {
     unknown: {
       color: "#120c0c",
       background: "#f8b2ea"
-    },    
+    },
     warning: {
       color: "#120c0c",
       background: "#ffdd6f"
@@ -117,32 +138,84 @@ var Youtube = {
       text: 'Played this month',
       type: 'softWarning'
     },
+    error: {
+      text: 'Error',
+      type: 'error'
+    },
+    unavailable: function(reason) {
+      return {
+        text: reason,
+        type: 'error'
+      }
+    },
     ok: function(date) {
       return {
         text: 'Last played ' + date,
         type: 'information'
       }
     },
-    error: {
-      text: 'Error',
-      type: 'error'
+  },
+  labels: {
+    labelNormal: {
+      fontSize: "11px",
+      marginTop: "4px",
+      padding: "2px 4px",
+      color: "white",
+      borderRadius: "3px",
+      display: "inline-block",
+      marginLeft: "5px"
+    },
+    labelWide: {
+      color: "white",
+      fontSize: "11px",
+      marginTop: "4px",
+      padding: "2px 4px",
+      color: "white",
+      borderRadius: "3px",
+      maxWidth: "200px",
+      textAlign: "center"
+    },
+    labelSmall: {
+      color: "white",
+      display: "inline-block",
+      fontSize: "10px",
+      padding: "1px 6px",
+      position: "relative",
+      top: "-1px",
+      padding: "2px 6px",
+      marginLeft: "5px",
+      borderRadius: "3px",
+      marginTop: "0px",
+      lineHeight: "14px",
+    },
+    labelLarge: {
+      display: "inline-block",
+      color: "white",
+      fontSize: "15px",
+      marginLeft: "5px",
+      position: "relative",
+      top: "-2px",
+      padding: "4px 8px",
+      borderRadius: "4px",
+      verticalAlign: "bottom",
+      maxWidth: "200px",
+      textAlign: "center"
     }
   },
+  checkButton: $('<a class="yt-uix-button yt-uix-sessionlink yt-uix-button-default yt-uix-button-size-default" id="check-btn"><span class="yt-uix-button-content" style="vertical-align: middle;">Check</span></a>').css({
+    marginRight: "10px",
+    paddingLeft: "15px",
+    paddingRight: "15px"
+  })
+}
+
+var Youtube = {
   insertCheckButton: function() {
-    var checkButton = $('<a class="yt-uix-button yt-uix-sessionlink yt-uix-button-default yt-uix-button-size-default" id="check-btn"><span class="yt-uix-button-content" style="vertical-align: middle;">Check</span></a>');
-
-    checkButton.css( {
-      marginRight: "10px",
-      paddingLeft: "15px",
-      paddingRight: "15px"
-    });
-
-    $('#yt-masthead-user').prepend(checkButton);
-    $('#yt-masthead-signin').prepend(checkButton);
+    $('#yt-masthead-user').prepend(Templates.checkButton);
+    $('#yt-masthead-signin').prepend(Templates.checkButton);
     return $('#check-btn');
   },
-  getVideoIDs: function() {
-    var songs = [];
+  getVideoElems: function() {
     var selectors = [
       'a[href^="/watch"].content-link', // Related videos
       'a[href^="/watch"].pl-video-title-link', // Playlist list view
@@ -150,70 +223,50 @@ var Youtube = {
       'a[href^="/watch"].yt-ui-ellipsis', // Homepage, Subscriptions, User page & more
       'link[href*="watch"][itemprop="url"]', // Main video
     ]
+    return $(selectors.join(','));
+  },
+  parseIDs: function(elems) {
+    return elems.map(function(i, elem) {
+      return elem.href.match(/watch\?v=([^&]*)/)[1];
+    }).toArray();
+  },
+  insertLabels: function(elems, IDs, results) {
+    if ($.isEmptyObject(results))
+      return;
 
-    $(selectors.join(',')).each(function(i, elem) {
-
-      var id = elem.href.match(/watch\?v=([^&]*)/)[1];
-      songs.push({id: id, elem: elem});
-
+    elems.each(function(index, elem) {
+      var id = IDs[index];
+      if (results[id])
+        this.appendLabel(elem, results[id]);
+    }.bind(this));
+  },
+  insertUnknownLabels: function(elems, IDs) {
+    elems.each(function(index, elem) {
+      var id = IDs[index];
+      this.appendLabel(elem, {status: "unknown"});
     });
-    return songs;
   },
   appendLabel: function(elem, result) {
-    var labelNormal = {
-      fontSize: "11px",
-      marginTop: "4px",
-      padding: "2px 4px 2px 4px",
-      color: "white",
-      borderRadius: "3px",
-      display: "inline-block",
-      marginLeft: "5px"
-    }
-
-    var labelWide = $.extend({}, labelNormal,{
-      maxWidth: "200px",
-      display: "block",
-      textAlign: "center"
-    })
-
-    var labelSmall = $.extend({}, labelNormal,{
-      fontSize: "10px",
-      display: "inline-block",
-      position: "relative",
-      top: "-1px",
-      marginLeft: "5px",
-      marginTop: "0px",
-      lineHeight: "14px",
-      padding: "1px 6px"
-    })
-
-    var labelLarge = $.extend({}, labelNormal,{
-      display: "inline-block",
-      fontSize: "15px",
-      marginLeft: "5px",
-      padding: "4px 8px",
-      bordeRadius: "4px",
-      verticalAlign: "bottom"
-    })
-
     if ($(elem).hasClass('yt-ui-ellipsis')) {
-      var label = this.createLabel(result, labelWide);
+      var label = this.createLabel(result, Templates.labels.labelWide);
+      var margin = 34 - $(elem).height();
+      label.css("marginTop",margin + "px");
       $(label).insertAfter($(elem).parent().parent().find('.yt-lockup-meta'));
     }
     else if ($(elem).hasClass('content-link')) {
-      var label = this.createLabel(result, labelSmall);
+      var label = this.createLabel(result, Templates.labels.labelSmall);
       $(elem).find('.view-count').append(label);
     }
     else if ($(elem).hasClass('pl-video-title-link')) {
-      var label = this.createLabel(result, labelNormal);
+      var label = this.createLabel(result, Templates.labels.labelNormal);
       $(elem).parent().append(label);
     }
     else if ($(elem).hasClass('playlist-video')) {
-      var label = this.createLabel(result, labelNormal);
+      var label = this.createLabel(result, Templates.labels.labelNormal);
       $(elem).find('.video-uploader-byline').append(label);
     }
     else if (elem.tagName == 'LINK') {
-      var label = this.createLabel(result, labelLarge);
+      var label = this.createLabel(result, Templates.labels.labelLarge);
       $('#eow-title').append(label);
     }
   },
@@ -222,88 +275,184 @@ var Youtube = {
     var elem = $('<div class="ongaku-label"></div>');
     elem.css(labelType);
     elem.text(verdict.text);
-    elem.css(this.styles[verdict.type]);
+    elem.css(Templates.styles[verdict.type]);
     return elem;
   },
   getVerdict: function(result) {
-
-    if (result.unknown == 1) return this.messages.unknown;
-	  if (result.b == 1) return this.messages.banned;
-	  if (result.o > 0) return this.messages.overplayed;
-	  if (result.t == 1) return this.messages.today;
-	  if (result.w == 1) return this.messages.week;
-	  if (result.m == 1) return this.messages.month;
+    if (result.status == 'unknown') return Templates.messages.unknown;
+    if (result.status == 'deleted') return Templates.messages.unavailable('Deleted');
+    if (result.status == 'blocked') return Templates.messages.unavailable('Blocked in too many regions');
+    if (result.status == 'unembeddable') return Templates.messages.unavailable('Not embeddable');
+	  if (result.b == 1) return Templates.messages.banned;
+	  if (result.o > 0) return Templates.messages.overplayed;
+	  if (result.t == 1) return Templates.messages.today;
+	  if (result.w == 1) return Templates.messages.week;
+	  if (result.m == 1) return Templates.messages.month;
 
     if(result.b !== 1 && result.o < 1 && result.t == 0 && result.w != 1)
-		  return this.messages.ok(result.w);
-  }
-};
+		  return Templates.messages.ok(result.w);
 
-var Senpai = {
-  parseResponse: function(response, callback) {
-    var results = {};
-
-    for(var index in response) {
-      var result = response[index];
-      Cache.put(result.id, result);
-      results[result.id] = response[index];
+    return Templates.messages.error;
+  },
+  enqueue: function(IDs, callback) {
+    var IDsToCheck = $.extend([], IDs);
+    while(IDsToCheck.length) {
+      // Max of 50 songs per request
+      callback(IDsToCheck.splice(0,50));
+    }
+  },
+  checkRestrictions: function(IDs, callback) {
+    var data = {
+      key: 'AIzaSyC8r6l_h-bGvcMzeZy01IwW9l6pJapuKYU',
+      part: "status,contentDetails",
+      id: IDs.join(",")
     }
 
-    callback(results);
+    $.getJSON(
+      'https://www.googleapis.com/youtube/v3/videos',
+      data,
+      function(response) {
+        this.parseRestrictions(response, callback);
+      }.bind(this)
+    )
   },
-  check: function(songsToCheck, callback) {
+  checkStatus: function(IDs, callback) {
     var payload = [];
 
-    for(var i in songsToCheck)
-      payload.push({cid: songsToCheck[i]});
+    for(var i in IDs)
+      payload.push({cid: IDs[i]});
 
     if (payload.length > 0) {
       $.post(
         'https://i.animemusic.me/animemusic/check.php?dj=6142984',
         JSON.stringify(payload),
         function(response) {
-          this.parseResponse(response, callback);
+          this.parseStatus(response, IDs, callback);
         }.bind(this),
         'json'
       );
     }
+  },
+  parseStatus: function(response, IDs, callback) {
+    var results = {};
+
+    for(var i in response) {
+      var result = response[i];
+      results[result.id] = response[i];
+    }
+
+    for(var i in IDs) {
+      if (results[IDs[i]] == undefined)
+        results[IDs[i]] = {status: "unknown"};
+    }
+
+    callback(results);
+  },
+  filterResults: function(IDs, results) {
+    if (results === undefined)
+      return IDs;
+
+    return IDs.filter(function(id) {
+      return !results[id];
+    })
+  },
+  filterDuplicates: function(list) {
+    return list.filter(function(elem, index, self) {
+      return index == self.indexOf(elem);
+    });
+  },
+  countryList: {
+		US: 10,
+
+		BR: 7, CA: 7, FR: 7, GB: 7,
+
+		AU: 3, CZ: 3, LT: 3,
+
+		ES: 2, MY: 2, NO: 2, RU: 2, SE: 2, SG: 2, TH: 2,
+
+		AE: 1, AR: 1, BE: 1, BG: 1, CH: 1, CL: 1, DK: 1, EE: 1, FI: 1, GR: 1, HK: 1,
+		HR: 1, HU: 1, ID: 1, IE: 1, IN: 1, IS: 1, IT: 1, LV: 1, MX: 1, NL: 1, NZ: 1,
+		PE: 1, PH: 1, PL: 1, PT: 1, RO: 1, RS: 1, SK: 1, SK: 1, TR: 1, TW: 1, UA: 1,
+		VN: 1,
+
+		DE: 0, JP: 0 // Sorry..
+  },
+  parseRestrictions: function(response, callback) {
+    var results = {};
+
+    if (!("items" in response))
+      return;
+
+    var items = response.items;
+
+    for(var index in items) {
+      var status = items[index].status
+      if (status.uploadStatus == 'rejected' || status.uploadStatus == 'deleted')
+        results[items[index].id] = {status: "deleted"};
+      else if(!status.embeddable)
+        results[items[index].id] = {status: "unembeddable"};
+      else if("regionRestriction" in items[index].contentDetails){
+        var restrict = items[index].contentDetails.regionRestriction;
+			  var score = 0;
+			  var result = {};
+			  var allowlist = "allowed" in restrict;
+
+			  if(allowlist)
+				  for(var c = 0; c < restrict.allowed.length; ++c)
+					  result[restrict.allowed[c]] = true;
+
+			  if("blocked" in restrict)
+				  for(var c = 0; c < restrict.blocked.length; ++c)
+					  result[restrict.blocked[c]] = false;
+
+			  for(var country in this.countryList)
+				  if(!(country in result))
+					  result[country] = !allowlist;
+
+			  for(var country in result)
+				  if(!result[country] && country in this.countryList)
+					  score += this.countryList[country];
+
+        if (score > 16)
+          results[items[index].id] = {status: "blocked"};
+      }
+
+    }
+
+    callback(results);
   }
 };
 
+window.Cache = Cache;
 Cache.clearExpired();
 
 Youtube.insertCheckButton().on('click', function() {
   Cache.clearExpired();
   $('.ongaku-label').remove();
 
-  var songs = Youtube.getVideoIDs();
-  var songsToCheck = Cache.getUncached(songs);
+  var elems = Youtube.getVideoElems();
+  var IDs = Youtube.parseIDs(elems);
+  var uniqueIDs = Youtube.filterDuplicates(IDs);
+  var cacheResults = Cache.getResults(IDs);
+  var IDsToCheck = Youtube.filterResults(uniqueIDs, cacheResults);
 
-  // Append labels from cache
-  for(var i in songs) {
-    var cacheItem = Cache.get(songs[i].id);
-    if (cacheItem)
-      Youtube.appendLabel(songs[i].elem, cacheItem);
-  }
+  Youtube.insertLabels(elems, IDs, cacheResults);
 
-  // Check, cache, and append uncached songs
-  Senpai.check(songsToCheck, function(results){
-    for(var i in songs) {
-      if (results[songs[i].id])
-        Youtube.appendLabel(songs[i].elem, results[songs[i].id]);
-    }
+  Youtube.enqueue(IDsToCheck, function(IDChunk) {
+    Youtube.checkRestrictions(IDChunk, function(results) {
+      Youtube.insertLabels(elems, IDs, results);
 
-    // Append unknown to leftovers
-    for(var i in songs) {
-      var cacheItem = Cache.get(songs[i].id);
-      if (!cacheItem) {
-        Cache.put(songs[i].id, {unknown: 1});
-        Youtube.appendLabel(songs[i].elem, {unknown: 1});
-      }
-    }
+      Cache.storeResults(results, 604800000, function() { // 1 week
+
+        IDsToCheck = Youtube.filterResults(IDChunk, results);
+
+        Youtube.checkStatus(IDsToCheck, function(results) {
+          Youtube.insertLabels(elems, IDs, results);
+
+          Cache.storeResults(results, 86400000, function(){}) // 24 hours
+
+        });
+      });
+    });
   });
 });
-
-
-
-
