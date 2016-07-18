@@ -281,15 +281,13 @@ var Youtube = {
     elem.css(labelType);
     elem.text(verdict.text);
 
-    elem.hover(function() {
-      if (result.alt !== null && result.alt !== undefined)
+    if (result.alt !== null && result.alt !== undefined) {
+      elem.hover(function() {
         $(this).text(result.alt + ' known versions');
-      else
-        $(this).text('No known versions');
-
-    }, function() {
-      $(this).text(verdict.text);
-    });
+      }, function() {
+        $(this).text(verdict.text);
+      });
+    }
 
     elem.css(Templates.styles[verdict.type]);
     return elem;
