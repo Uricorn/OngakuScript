@@ -289,6 +289,15 @@ var Youtube = {
       });
     }
 
+    elem.on('click', function(e) {
+      e.preventDefault();
+
+      if (e.ctrlKey && e.shiftKey) {
+        if (result.alt === null && result.id !== undefined)
+          window.open('http://i.animemusic.me/animemusic/suggest.php?cid=' + result.id)
+      }
+    });
+
     elem.css(Templates.styles[verdict.type]);
     return elem;
   },
