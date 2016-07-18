@@ -110,7 +110,7 @@ var Templates = {
     warning: {
       color: "#120c0c",
       background: "#ffdd6f"
-    }
+    },
   },
   messages: {
     unknown: {
@@ -162,9 +162,11 @@ var Templates = {
       color: "white",
       borderRadius: "3px",
       display: "inline-block",
-      marginLeft: "5px"
+      marginLeft: "5px",
+      cursor: "pointer"
     },
     labelWide: {
+      display: "block",
       color: "white",
       fontSize: "11px",
       marginTop: "4px",
@@ -172,20 +174,21 @@ var Templates = {
       color: "white",
       borderRadius: "3px",
       maxWidth: "200px",
-      textAlign: "center"
+      textAlign: "center",
+      textDecoration: "none",
+      cursor: "pointer"
     },
     labelSmall: {
       color: "white",
       display: "inline-block",
       fontSize: "10px",
-      padding: "1px 6px",
       position: "relative",
       top: "-1px",
       padding: "2px 6px",
-      marginLeft: "5px",
       borderRadius: "3px",
-      marginTop: "0px",
-      lineHeight: "14px",
+      marginTop: "2px",
+      lineHeight: "12px",
+      cursor: "pointer"
     },
     labelLarge: {
       display: "inline-block",
@@ -193,12 +196,13 @@ var Templates = {
       fontSize: "15px",
       marginLeft: "5px",
       position: "relative",
-      top: "-2px",
+      top: "-3px",
       padding: "4px 8px",
       borderRadius: "4px",
       verticalAlign: "bottom",
       maxWidth: "250px",
-      textAlign: "center"
+      textAlign: "center",
+      cursor: "pointer"
     }
   },
   checkButton: $('<a class="yt-uix-button yt-uix-sessionlink yt-uix-button-default yt-uix-button-size-default" id="check-btn"><span class="yt-uix-button-content" style="vertical-align: middle;">Check</span></a>').css({
@@ -254,7 +258,9 @@ var Youtube = {
     }
     else if ($(elem).hasClass('content-link')) {
       var label = this.createLabel(result, Templates.labels.labelSmall);
-      $(elem).find('.view-count').append(label);
+      // $(elem).children().first().prepend(label);
+      // $(elem).find('.view-count').append(label);
+      label.insertAfter($(elem).find('.view-count'));
     }
     else if ($(elem).hasClass('pl-video-title-link')) {
       var label = this.createLabel(result, Templates.labels.labelNormal);
@@ -266,14 +272,25 @@ var Youtube = {
     }
     else if (elem.tagName == 'LINK') {
       var label = this.createLabel(result, Templates.labels.labelLarge);
-      $('#eow-title').append(label);
+      $('#eow-title').prepend(label);
     }
   },
   createLabel: function(result, labelType) {
     var verdict = this.getVerdict(result);
-    var elem = $('<div class="ongaku-label"></div>');
+    var elem = $('<span class="ongaku-label"></span>');
     elem.css(labelType);
     elem.text(verdict.text);
+
+    elem.hover(function() {
+      if (result.alt !== null && result.alt !== undefined)
+        $(this).text(result.alt + ' known versions');
+      else
+        $(this).text('No known versions');
+
+    }, function() {
+      $(this).text(verdict.text);
+    });
+
     elem.css(Templates.styles[verdict.type]);
     return elem;
   },
@@ -282,14 +299,14 @@ var Youtube = {
     if (result.status == 'deleted') return Templates.messages.unavailable('Deleted');
     if (result.status == 'blocked') return Templates.messages.unavailable('Blocked in too many regions');
     if (result.status == 'unembeddable') return Templates.messages.unavailable('Not embeddable');
-	  if (result.b == 1) return Templates.messages.banned;
-	  if (result.o > 0) return Templates.messages.overplayed;
-	  if (result.t == 1) return Templates.messages.today;
-	  if (result.w == 1) return Templates.messages.week;
-	  if (result.m == 1) return Templates.messages.month;
+    if (result.b == 1) return Templates.messages.banned;
+    if (result.o > 0) return Templates.messages.overplayed;
+    if (result.t == 1) return Templates.messages.today;
+    if (result.w == 1) return Templates.messages.week;
+    if (result.m == 1) return Templates.messages.month;
 
     if(result.b !== 1 && result.o < 1 && result.t == 0 && result.w != 1)
-		  return Templates.messages.ok(result.w);
+      return Templates.messages.ok(result.w);
 
     return Templates.messages.error;
   },
@@ -361,20 +378,20 @@ var Youtube = {
     });
   },
   countryList: {
-		US: 10,
+    US: 10,
 
-		BR: 7, CA: 7, FR: 7, GB: 7,
+    BR: 7, CA: 7, FR: 7, GB: 7,
 
-		AU: 3, CZ: 3, LT: 3,
+    AU: 3, CZ: 3, LT: 3,
 
-		ES: 2, MY: 2, NO: 2, RU: 2, SE: 2, SG: 2, TH: 2,
+    ES: 2, MY: 2, NO: 2, RU: 2, SE: 2, SG: 2, TH: 2,
 
-		AE: 1, AR: 1, BE: 1, BG: 1, CH: 1, CL: 1, DK: 1, EE: 1, FI: 1, GR: 1, HK: 1,
-		HR: 1, HU: 1, ID: 1, IE: 1, IN: 1, IS: 1, IT: 1, LV: 1, MX: 1, NL: 1, NZ: 1,
-		PE: 1, PH: 1, PL: 1, PT: 1, RO: 1, RS: 1, SK: 1, SK: 1, TR: 1, TW: 1, UA: 1,
-		VN: 1,
+    AE: 1, AR: 1, BE: 1, BG: 1, CH: 1, CL: 1, DK: 1, EE: 1, FI: 1, GR: 1, HK: 1,
+    HR: 1, HU: 1, ID: 1, IE: 1, IN: 1, IS: 1, IT: 1, LV: 1, MX: 1, NL: 1, NZ: 1,
+    PE: 1, PH: 1, PL: 1, PT: 1, RO: 1, RS: 1, SK: 1, SK: 1, TR: 1, TW: 1, UA: 1,
+    VN: 1,
 
-		DE: 0, JP: 0 // Sorry..
+    DE: 0, JP: 0 // Sorry..
   },
   parseRestrictions: function(response, callback) {
     var results = {};
@@ -392,32 +409,30 @@ var Youtube = {
         results[items[index].id] = {status: "unembeddable"};
       else if("regionRestriction" in items[index].contentDetails){
         var restrict = items[index].contentDetails.regionRestriction;
-			  var score = 0;
-			  var result = {};
-			  var allowlist = "allowed" in restrict;
+        var score = 0;
+        var result = {};
+        var allowlist = "allowed" in restrict;
 
-			  if(allowlist)
-				  for(var c = 0; c < restrict.allowed.length; ++c)
-					  result[restrict.allowed[c]] = true;
+        if(allowlist)
+          for(var c = 0; c < restrict.allowed.length; ++c)
+            result[restrict.allowed[c]] = true;
 
-			  if("blocked" in restrict)
-				  for(var c = 0; c < restrict.blocked.length; ++c)
-					  result[restrict.blocked[c]] = false;
+        if("blocked" in restrict)
+          for(var c = 0; c < restrict.blocked.length; ++c)
+            result[restrict.blocked[c]] = false;
 
-			  for(var country in this.countryList)
-				  if(!(country in result))
-					  result[country] = !allowlist;
+        for(var country in this.countryList)
+          if(!(country in result))
+            result[country] = !allowlist;
 
-			  for(var country in result)
-				  if(!result[country] && country in this.countryList)
-					  score += this.countryList[country];
+        for(var country in result)
+          if(!result[country] && country in this.countryList)
+            score += this.countryList[country];
 
         if (score > 16)
           results[items[index].id] = {status: "blocked"};
       }
-
     }
-
     callback(results);
   }
 };
