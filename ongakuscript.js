@@ -12,7 +12,7 @@ var Cache = {
     }
   },
   clearExpired: function() {
-    if (!this.storageAvailable)
+    if (!this.storageAvailable())
       return;
 
     var storage = window.localStorage;
@@ -27,7 +27,7 @@ var Cache = {
     }
   },
   clearAll: function() {
-    if (!this.storageAvailable)
+    if (!this.storageAvailable())
       return;
 
     var storage = window.localStorage;
@@ -40,7 +40,7 @@ var Cache = {
     }
   },
   getResults: function(IDs) {
-    if (!this.storageAvailable)
+    if (!this.storageAvailable())
       return [];
 
     var storage = window.localStorage;
@@ -53,7 +53,7 @@ var Cache = {
     }, {});
   },
   storeResults: function(results, expiration, callback) {
-    if (!this.storageAvailable)
+    if (!this.storageAvailable())
       return;
 
     var storage = window.localStorage;
@@ -70,7 +70,7 @@ var Cache = {
     callback();
   },
   filterUncached: function(IDs) {
-    if (!this.storageAvailable)
+    if (!this.storageAvailable())
       return;
 
     var storage = window.localStorage;
@@ -80,7 +80,7 @@ var Cache = {
     });
   },
   getUncached: function(IDs) {
-    if (!this.storageAvailable)
+    if (!this.storageAvailable())
       return;
 
     var storage = window.localStorage;
