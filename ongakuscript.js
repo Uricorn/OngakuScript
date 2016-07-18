@@ -272,7 +272,7 @@ var Youtube = {
     }
     else if (elem.tagName == 'LINK') {
       var label = this.createLabel(result, Templates.labels.labelLarge);
-      $('#eow-title').prepend(label);
+      $('#eow-title').append(label);
     }
   },
   createLabel: function(result, labelType) {
