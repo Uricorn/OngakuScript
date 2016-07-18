@@ -19,7 +19,7 @@ var Cache = {
 
     for(var key in storage) {
       var item = storage.getItem(key);
-      if (item !== null) {
+      if (item !== null && item.match(/^{.*}$/)) {
         var video = JSON.parse(item);
         if (Date.now() > video.expiration)
           storage.removeItem(key);
@@ -87,6 +87,53 @@ var Cache = {
     return IDs.filter(function(id) {
       return storage.getItem(id) == null;
     });
+  },
+  hasMark: function(id) {
+    if (!this.storageAvailable())
+      return;
+
+    var storage = window.localStorage;
+    var item = storage.getItem('marked');
+
+    if (item === null)
+      return false;
+
+    var obj = JSON.parse(item);
+
+    if (obj[id])
+      return true;
+
+    return false;
+  },
+  mark: function(id) {
+    if (!this.storageAvailable())
+      return;
+
+    var storage = window.localStorage;
+    var item = storage.getItem('marked');
+
+    if (item !== null)
+      item = JSON.parse(item);
+    else
+      item = {};
+
+    item[id] = Date.now();
+    storage.setItem('marked', JSON.stringify(item));
+
+  },
+  unmark: function(id) {
+    if (!this.storageAvailable())
+      return;
+
+    var storage = window.localStorage;
+    var item = storage.getItem('marked');
+
+    if (item === null)
+      return;
+
+    var obj = JSON.parse(item);
+    delete obj[id];
+    storage.setItem('marked', JSON.stringify(obj));
   }
 };
 
@@ -205,11 +252,13 @@ var Templates = {
       cursor: "pointer"
     }
   },
+  markButton: $('<button id="mark-btn" class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity no-icon-markup pause-resume-autoplay action-panel-trigger  yt-uix-tooltip" type="button" onclick=";return false;" title="Mark " data-tooltip-text="Mark " aria-labelledby="yt-uix-tooltip133-arialabel"><span class="yt-uix-button-content">Mark </span></button>').css("margin-left", "5px"),
+  unmarkButton: $('<button id="unmark-btn" class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity no-icon-markup pause-resume-autoplay action-panel-trigger  yt-uix-tooltip" type="button" onclick=";return false;" title="Mark " data-tooltip-text="Unmark " aria-labelledby="yt-uix-tooltip133-arialabel"><span class="yt-uix-button-content">Unmark </span></button>').css("margin-left", "5px"),
   checkButton: $('<a class="yt-uix-button yt-uix-sessionlink yt-uix-button-default yt-uix-button-size-default" id="check-btn"><span class="yt-uix-button-content" style="vertical-align: middle;">Check</span></a>').css({
     marginRight: "10px",
     paddingLeft: "15px",
     paddingRight: "15px"
-  })
+  }),
 }
 
 var Youtube = {
@@ -217,6 +266,51 @@ var Youtube = {
     $('#yt-masthead-user').prepend(Templates.checkButton);
     $('#yt-masthead-signin').prepend(Templates.checkButton);
     return $('#check-btn');
+  },
+  insertMarkButton: function() {
+    $('#watch8-secondary-actions').append(Templates.markButton);
+    $('#watch8-secondary-actions').append(Templates.unmarkButton);
+
+    $('#mark-btn').off('click');
+    $('#unmark-btn').off('click');
+
+    var videoElem = $('link[href*="watch"][itemprop="url"]');
+    var id = videoElem[0].href.match(/watch\?v=([^&]*)/)[1];
+
+    $('#mark-btn').on('click', function(e) { Youtube.mark(id,e)});
+    $('#unmark-btn').on('click', function(e) { Youtube.unmark(id,e)});
+
+    Youtube.toggleMarkButtons(id);
+  },
+  onTransition: function(event) {
+    if (event.propertyName !== 'transform' && event.propertyName !== 'width')
+      return;
+
+    if (event.target.id !== 'progress' && event.target.className !=='ytp-load-progress')
+      return
+
+    if ($('#mark-btn').length > 0)
+      return
+
+    Youtube.insertMarkButton();
+  },
+  toggleMarkButtons: function(id) {
+    if (Cache.hasMark(id)) {
+      $('#unmark-btn').show();
+      $('#mark-btn').hide();
+    }
+    else {
+      $('#mark-btn').show();
+      $('#unmark-btn').hide();
+    }
+  },
+  mark: function(id, event) {
+    Cache.mark(id, {id: Date.now() + 2629746000});
+    Youtube.toggleMarkButtons(id);
+  },
+  unmark: function(id, event) {
+    Cache.unmark(id);
+    Youtube.toggleMarkButtons(id);
   },
   getVideoElems: function() {
     var selectors = [
@@ -241,6 +335,7 @@ var Youtube = {
       var id = IDs[index];
       if (results[id])
         this.appendLabel(elem, results[id]);
+
     }.bind(this));
   },
   insertUnknownLabels: function(elems, IDs) {
@@ -446,6 +541,10 @@ var Youtube = {
 
 window.Cache = Cache;
 Cache.clearExpired();
+
+Youtube.insertMarkButton();
+
+window.addEventListener('transitionend', Youtube.onTransition, true);
 
 Youtube.insertCheckButton().on('click', function() {
   Cache.clearExpired();
