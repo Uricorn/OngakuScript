@@ -51,6 +51,15 @@ var Cache = {
         storage.removeItem(key);
     }
   },
+  getResult: function(id) {
+    if (!this.storageAvailable())
+      return [];
+
+    var item = window.localStorage.getItem(id);
+
+    if (item !== null)
+      return JSON.parse(item);
+  },
   getResults: function(IDs) {
     if (!this.storageAvailable())
       return [];
@@ -59,6 +68,7 @@ var Cache = {
 
     return IDs.reduce(function(obj, id) {
       var item = storage.getItem(id);
+
       if (item !== null)
         obj[id] = JSON.parse(storage.getItem(id));
       return obj;
@@ -99,6 +109,22 @@ var Cache = {
     return IDs.filter(function(id) {
       return storage.getItem(id) == null;
     });
+  },
+  getMarks: function() {
+    if (!this.storageAvailable())
+      return;
+
+    var storage = window.localStorage;
+    var item = storage.getItem('marked');
+    return JSON.parse(item);
+    var marks = [];
+
+    if (item !== null) {
+      var obj = JSON.parse(item);
+      for(var key in obj)
+        marks.push(key);
+    }
+    return marks;
   },
   hasMark: function(id) {
     if (!this.storageAvailable())
@@ -146,6 +172,50 @@ var Cache = {
     var obj = JSON.parse(item);
     delete obj[id];
     storage.setItem('marked', JSON.stringify(obj));
+  },
+  clearMarks: function() {
+    if (!this.storageAvailable())
+      return;
+
+    var storage = window.localStorage;
+    var item = storage.getItem('marked');
+
+    if (item === null)
+      return;
+
+    var marked = JSON.parse(item);
+
+    for(var key in marked) {
+      var result = storage.getItem(key);
+
+      if (result == null || !result.match(/^{.*}$/))
+        continue;
+
+      result = JSON.parse(result);
+
+      if (!result.w)
+        continue;
+
+      if (result.w != 1) {
+        var played = Date.UTC(
+          result.w.substr(0,4),
+          result.w.substr(5,2) - 1,
+          result.w.substr(8,2),
+          result.w.substr(11,2),
+          result.w.substr(14,2),
+          result.w.substr(17,2)
+        );
+
+        if (marked[key] - 2629746000 < played) {
+          delete marked[key];
+          storage.setItem('marked', JSON.stringify(marked));
+        }
+      }
+      else if (result.w == '1') {
+        delete marked[key];
+        storage.setItem('marked', JSON.stringify(marked));
+      }
+    }
   }
 };
 
@@ -296,8 +366,8 @@ var Youtube = {
     if (videoElem.length > 0)
       var id = videoElem[0].href.match(/watch\?v=([^&]*)/)[1];
 
-    $('#mark-btn').on('click', function(e) { Youtube.mark(id,e)});
-    $('#unmark-btn').on('click', function(e) { Youtube.unmark(id,e)});
+    $('#mark-btn').on('click', function(e) { Youtube.mark(id,videoElem[0],e)});
+    $('#unmark-btn').on('click', function(e) { Youtube.unmark(id,videoElem[0],e)});
 
     Youtube.toggleMarkButtons(id);
   },
@@ -315,6 +385,7 @@ var Youtube = {
   },
   onCheckClick: function(event) {
     Cache.clearExpired();
+    Cache.clearMarks();
     $('.ongaku-label').remove();
 
     var elems = Youtube.getVideoElems();
@@ -322,8 +393,11 @@ var Youtube = {
     var uniqueIDs = Youtube.filterDuplicates(IDs);
     var cacheResults = Cache.getResults(IDs);
     var IDsToCheck = Youtube.filterResults(uniqueIDs, cacheResults);
+    var markIDs = Cache.getMarks();
+    var markIDsToCheck = Youtube.filterMarks(uniqueIDs, markIDs);
+    IDsToCheck = IDsToCheck.concat(markIDsToCheck);
 
-    Youtube.insertLabels(elems, IDs, cacheResults);
+    Youtube.insertLabels(elems, IDs, cacheResults, true);
 
     Youtube.enqueue(IDsToCheck, function(IDChunk) {
       Youtube.checkRestrictions(IDChunk, function(results) {
@@ -350,13 +424,15 @@ var Youtube = {
       $('#unmark-btn').hide();
     }
   },
-  mark: function(id, event) {
+  mark: function(id, elem, event) {
     Cache.mark(id);
-    Youtube.toggleMarkButtons(id);
+    this.appendLabel(elem, Cache.getResult(id), id, true);
+    this.toggleMarkButtons(id);
   },
-  unmark: function(id, event) {
+  unmark: function(id, elem, event) {
     Cache.unmark(id);
-    Youtube.toggleMarkButtons(id);
+    $('[cache=' + id + '].ongaku-mark').remove();
+    this.toggleMarkButtons(id);
   },
   getVideoElems: function() {
     var selectors = [
@@ -373,14 +449,14 @@ var Youtube = {
       return elem.href.match(/watch\?v=([^&]*)/)[1];
     }).toArray();
   },
-  insertLabels: function(elems, IDs, results) {
+  insertLabels: function(elems, IDs, results, cache) {
     if ($.isEmptyObject(results))
       return;
 
     elems.each(function(index, elem) {
       var id = IDs[index];
       if (results[id])
-        this.appendLabel(elem, results[id], id);
+        this.appendLabel(elem, results[id], id, cache);
 
     }.bind(this));
   },
@@ -390,9 +466,11 @@ var Youtube = {
       this.appendLabel(elem, {status: "unknown"}, id);
     });
   },
-  appendLabel: function(elem, result, id) {
+  appendLabel: function(elem, result, id, cache) {
+    $('[cache=' + id + ']').remove();
+
     if ($(elem).hasClass('yt-ui-ellipsis')) {
-      var label = this.createLabel(result, Templates.labels.labelWide, id);
+      var label = this.createLabel(result, Templates.labels.labelWide, id, cache);
       var margin = 34 - $(elem).height();
 
       if (Array.isArray(label)) {
@@ -406,26 +484,29 @@ var Youtube = {
       $(elem).parent().parent().append(label);
     }
     else if ($(elem).hasClass('content-link')) {
-      var label = this.createLabel(result, Templates.labels.labelSmall, id);
+      var label = this.createLabel(result, Templates.labels.labelSmall, id, cache);
       // $(label).insertAfter($(elem).find('.view-count'));
       $(elem).append(label);
     }
     else if ($(elem).hasClass('pl-video-title-link')) {
-      var label = this.createLabel(result, Templates.labels.labelNormal, id);
+      var label = this.createLabel(result, Templates.labels.labelNormal, id, cache);
       $(elem).parent().append(label);
     }
     else if ($(elem).hasClass('playlist-video')) {
-      var label = this.createLabel(result, Templates.labels.labelNormal, id);
+      var label = this.createLabel(result, Templates.labels.labelNormal, id, cache);
       $(elem).find('.video-uploader-byline').append(label);
     }
     else if (elem.tagName == 'LINK') {
-      var label = this.createLabel(result, Templates.labels.labelLarge, id);
+      var label = this.createLabel(result, Templates.labels.labelLarge, id, cache);
       $('#eow-title').append(label);
     }
   },
-  createLabel: function(result, labelType, id) {
+  createLabel: function(result, labelType, id, cache) {
     var verdict = this.getVerdict(result);
     var elem = $('<span class="ongaku-label"></span>');
+
+    if (cache)
+      elem.attr('cache',id);
 
     elem.css(labelType);
     elem.text(verdict.text);
@@ -453,6 +534,11 @@ var Youtube = {
       var markElem = $('<span class="ongaku-label">Marked</span>');
       markElem.css(labelType);
       markElem.css(Templates.styles.mark);
+      markElem.addClass('ongaku-mark')
+
+      if (cache)
+        markElem.attr('cache',id);
+
       return [elem, markElem];
     }
 
@@ -534,7 +620,15 @@ var Youtube = {
 
     return IDs.filter(function(id) {
       return !results[id];
-    })
+    });
+  },
+  filterMarks: function(IDs, results) {
+    if (results == undefined)
+      return [];
+
+    return IDs.filter(function(id) {
+      return results[id];
+    });
   },
   filterDuplicates: function(list) {
     return list.filter(function(elem, index, self) {
@@ -601,6 +695,7 @@ var Youtube = {
   }
 };
 
+Cache.clearMarks();
 window.Cache = Cache;
 Cache.clearExpired();
 Youtube.insertMarkButton();
