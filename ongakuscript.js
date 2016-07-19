@@ -16,11 +16,23 @@ var Cache = {
       return;
 
     var storage = window.localStorage;
+    var marked = storage.getItem('marked');
+
+    if (marked !== null) {
+      var obj = JSON.parse(marked);
+
+      for(var key in obj) {
+        if (Date.now() > obj[key])
+          delete obj[key];
+      }
+      storage.setItem('marked', JSON.stringify(obj));
+    }
 
     for(var key in storage) {
       var item = storage.getItem(key);
       if (item !== null && item.match(/^{.*}$/)) {
         var video = JSON.parse(item);
+
         if (Date.now() > video.expiration)
           storage.removeItem(key);
       }
@@ -117,7 +129,7 @@ var Cache = {
     else
       item = {};
 
-    item[id] = Date.now();
+    item[id] = Date.now() + 2629746000; // 1 month
     storage.setItem('marked', JSON.stringify(item));
 
   },
@@ -312,7 +324,7 @@ var Youtube = {
     }
   },
   mark: function(id, event) {
-    Cache.mark(id, {id: Date.now() + 2629746000});
+    Cache.mark(id);
     Youtube.toggleMarkButtons(id);
   },
   unmark: function(id, event) {
@@ -414,7 +426,6 @@ var Youtube = {
       var markElem = $('<span class="ongaku-label">Marked</span>');
       markElem.css(labelType);
       markElem.css(Templates.styles.mark);
-      console.log(markElem);
       return [elem, markElem];
     }
 
