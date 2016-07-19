@@ -282,7 +282,7 @@ var Youtube = {
   insertCheckButton: function() {
     $('#yt-masthead-user').prepend(Templates.checkButton);
     $('#yt-masthead-signin').prepend(Templates.checkButton);
-    return $('#check-btn');
+    $('#check-btn').on('click', Youtube.onCheckClick);
   },
   insertMarkButton: function() {
     $('#watch8-secondary-actions').append(Templates.markButton);
@@ -312,6 +312,33 @@ var Youtube = {
       return
 
     Youtube.insertMarkButton();
+  },
+  onCheckClick: function(event) {
+    Cache.clearExpired();
+    $('.ongaku-label').remove();
+
+    var elems = Youtube.getVideoElems();
+    var IDs = Youtube.parseIDs(elems);
+    var uniqueIDs = Youtube.filterDuplicates(IDs);
+    var cacheResults = Cache.getResults(IDs);
+    var IDsToCheck = Youtube.filterResults(uniqueIDs, cacheResults);
+
+    Youtube.insertLabels(elems, IDs, cacheResults);
+
+    Youtube.enqueue(IDsToCheck, function(IDChunk) {
+      Youtube.checkRestrictions(IDChunk, function(results) {
+        Youtube.insertLabels(elems, IDs, results);
+
+        Cache.storeResults(results, 604800000) // 1 week
+        IDsToCheck = Youtube.filterResults(IDChunk, results);
+
+        Youtube.checkStatus(IDsToCheck, function(results) {
+          Youtube.insertLabels(elems, IDs, results);
+
+          Cache.storeResults(results, 86400000); // 24 hours
+        });
+      });
+    });
   },
   toggleMarkButtons: function(id) {
     if (Cache.hasMark(id)) {
@@ -576,35 +603,6 @@ var Youtube = {
 
 window.Cache = Cache;
 Cache.clearExpired();
-
 Youtube.insertMarkButton();
-
 window.addEventListener('transitionend', Youtube.onTransition, true);
-
-Youtube.insertCheckButton().on('click', function() {
-  Cache.clearExpired();
-  $('.ongaku-label').remove();
-
-  var elems = Youtube.getVideoElems();
-  var IDs = Youtube.parseIDs(elems);
-  var uniqueIDs = Youtube.filterDuplicates(IDs);
-  var cacheResults = Cache.getResults(IDs);
-  var IDsToCheck = Youtube.filterResults(uniqueIDs, cacheResults);
-
-  Youtube.insertLabels(elems, IDs, cacheResults);
-
-  Youtube.enqueue(IDsToCheck, function(IDChunk) {
-    Youtube.checkRestrictions(IDChunk, function(results) {
-      Youtube.insertLabels(elems, IDs, results);
-
-      Cache.storeResults(results, 604800000) // 1 week
-      IDsToCheck = Youtube.filterResults(IDChunk, results);
-
-      Youtube.checkStatus(IDsToCheck, function(results) {
-        Youtube.insertLabels(elems, IDs, results);
-
-        Cache.storeResults(results, 86400000); // 24 hours
-      });
-    });
-  });
-});
+Youtube.insertCheckButton();
