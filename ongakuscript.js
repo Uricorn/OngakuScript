@@ -158,6 +158,11 @@ var Templates = {
       color: "#120c0c",
       background: "#ffdd6f"
     },
+    mark: {
+      color: "#120c0c",
+      background: "#93d7ff",
+      marginLeft: "5px",
+    }
   },
   messages: {
     unknown: {
@@ -275,7 +280,9 @@ var Youtube = {
     $('#unmark-btn').off('click');
 
     var videoElem = $('link[href*="watch"][itemprop="url"]');
-    var id = videoElem[0].href.match(/watch\?v=([^&]*)/)[1];
+
+    if (videoElem.length > 0)
+      var id = videoElem[0].href.match(/watch\?v=([^&]*)/)[1];
 
     $('#mark-btn').on('click', function(e) { Youtube.mark(id,e)});
     $('#unmark-btn').on('click', function(e) { Youtube.unmark(id,e)});
@@ -334,45 +341,53 @@ var Youtube = {
     elems.each(function(index, elem) {
       var id = IDs[index];
       if (results[id])
-        this.appendLabel(elem, results[id]);
+        this.appendLabel(elem, results[id], id);
 
     }.bind(this));
   },
   insertUnknownLabels: function(elems, IDs) {
     elems.each(function(index, elem) {
       var id = IDs[index];
-      this.appendLabel(elem, {status: "unknown"});
+      this.appendLabel(elem, {status: "unknown"}, id);
     });
   },
-  appendLabel: function(elem, result) {
+  appendLabel: function(elem, result, id) {
     if ($(elem).hasClass('yt-ui-ellipsis')) {
-      var label = this.createLabel(result, Templates.labels.labelWide);
+      var label = this.createLabel(result, Templates.labels.labelWide, id);
       var margin = 34 - $(elem).height();
-      label.css("marginTop",margin + "px");
-      $(label).insertAfter($(elem).parent().parent().find('.yt-lockup-meta'));
+
+      if (Array.isArray(label)) {
+        label[0].css("marginTop", margin + "px");
+        label[1].css("marginLeft", "0px");
+      }
+      else
+        label.css("marginTop",margin + "px");
+
+      // $(label).insertAfter($(elem).parent().parent().find('.yt-lockup-meta'));
+      $(elem).parent().parent().append(label);
     }
     else if ($(elem).hasClass('content-link')) {
-      var label = this.createLabel(result, Templates.labels.labelSmall);
-      // $(elem).children().first().prepend(label);
-      // $(elem).find('.view-count').append(label);
-      label.insertAfter($(elem).find('.view-count'));
+      var label = this.createLabel(result, Templates.labels.labelSmall, id);
+      // $(label).insertAfter($(elem).find('.view-count'));
+      $(elem).append(label);
     }
     else if ($(elem).hasClass('pl-video-title-link')) {
-      var label = this.createLabel(result, Templates.labels.labelNormal);
+      var label = this.createLabel(result, Templates.labels.labelNormal, id);
       $(elem).parent().append(label);
     }
     else if ($(elem).hasClass('playlist-video')) {
-      var label = this.createLabel(result, Templates.labels.labelNormal);
+      var label = this.createLabel(result, Templates.labels.labelNormal, id);
       $(elem).find('.video-uploader-byline').append(label);
     }
     else if (elem.tagName == 'LINK') {
-      var label = this.createLabel(result, Templates.labels.labelLarge);
+      var label = this.createLabel(result, Templates.labels.labelLarge, id);
       $('#eow-title').append(label);
     }
   },
-  createLabel: function(result, labelType) {
+  createLabel: function(result, labelType, id) {
     var verdict = this.getVerdict(result);
     var elem = $('<span class="ongaku-label"></span>');
+
     elem.css(labelType);
     elem.text(verdict.text);
 
@@ -394,6 +409,15 @@ var Youtube = {
     });
 
     elem.css(Templates.styles[verdict.type]);
+
+    if (Cache.hasMark(id)) {
+      var markElem = $('<span class="ongaku-label">Marked</span>');
+      markElem.css(labelType);
+      markElem.css(Templates.styles.mark);
+      console.log(markElem);
+      return [elem, markElem];
+    }
+
     return elem;
   },
   getVerdict: function(result) {
