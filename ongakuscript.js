@@ -328,9 +328,9 @@ var Templates = {
       display: "inline-block",
       color: "white",
       fontSize: "15px",
+      top: "1px",
       marginLeft: "5px",
       position: "relative",
-      top: "-3px",
       padding: "4px 8px",
       borderRadius: "4px",
       verticalAlign: "bottom",
@@ -398,6 +398,14 @@ var Youtube = {
     IDsToCheck = IDsToCheck.concat(markIDsToCheck);
 
     Youtube.insertLabels(elems, IDs, cacheResults, true);
+
+    if (window.timeout)
+      return;
+
+    window.timeout = true;
+    setTimeout(function() {
+      window.timeout = false;
+    }, 3000);
 
     Youtube.enqueue(IDsToCheck, function(IDChunk) {
       Youtube.checkRestrictions(IDChunk, function(results) {
