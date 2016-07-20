@@ -106,7 +106,6 @@ var Cache = {
 
     var storage = window.localStorage;
     var item = storage.getItem('marked');
-    return JSON.parse(item);
     var marks = [];
 
     if (item !== null) {
