@@ -569,7 +569,7 @@ var Youtube = {
     return Templates.messages.error;
   },
   enqueue: function(IDs, callback) {
-    var IDsToCheck = $.extend([], IDs);
+    var IDsToCheck = $.extend([], IDs.slice(0,200));
     while(IDsToCheck.length) {
       // Max of 50 songs per request
       callback(IDsToCheck.splice(0,50));
