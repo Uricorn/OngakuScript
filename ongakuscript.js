@@ -16,11 +16,23 @@ var Cache = {
       return;
 
     var storage = window.localStorage;
+    var marked = storage.getItem('marked');
+
+    if (marked !== null) {
+      var obj = JSON.parse(marked);
+
+      for(var key in obj) {
+        if (Date.now() > obj[key])
+          delete obj[key];
+      }
+      storage.setItem('marked', JSON.stringify(obj));
+    }
 
     for(var key in storage) {
       var item = storage.getItem(key);
-      if (item !== null) {
+      if (item !== null && item.match(/^{.*}$/)) {
         var video = JSON.parse(item);
+
         if (Date.now() > video.expiration)
           storage.removeItem(key);
       }
@@ -39,6 +51,15 @@ var Cache = {
         storage.removeItem(key);
     }
   },
+  getResult: function(id) {
+    if (!this.storageAvailable())
+      return [];
+
+    var item = window.localStorage.getItem(id);
+
+    if (item !== null)
+      return JSON.parse(item);
+  },
   getResults: function(IDs) {
     if (!this.storageAvailable())
       return [];
@@ -47,6 +68,7 @@ var Cache = {
 
     return IDs.reduce(function(obj, id) {
       var item = storage.getItem(id);
+
       if (item !== null)
         obj[id] = JSON.parse(storage.getItem(id));
       return obj;
@@ -87,6 +109,113 @@ var Cache = {
     return IDs.filter(function(id) {
       return storage.getItem(id) == null;
     });
+  },
+  getMarks: function() {
+    if (!this.storageAvailable())
+      return;
+
+    var storage = window.localStorage;
+    var item = storage.getItem('marked');
+    return JSON.parse(item);
+    var marks = [];
+
+    if (item !== null) {
+      var obj = JSON.parse(item);
+      for(var key in obj)
+        marks.push(key);
+    }
+    return marks;
+  },
+  hasMark: function(id) {
+    if (!this.storageAvailable())
+      return;
+
+    var storage = window.localStorage;
+    var item = storage.getItem('marked');
+
+    if (item === null)
+      return false;
+
+    var obj = JSON.parse(item);
+
+    if (obj[id])
+      return true;
+
+    return false;
+  },
+  mark: function(id) {
+    if (!this.storageAvailable())
+      return;
+
+    var storage = window.localStorage;
+    var item = storage.getItem('marked');
+
+    if (item !== null)
+      item = JSON.parse(item);
+    else
+      item = {};
+
+    item[id] = Date.now() + 2629746000; // 1 month
+    storage.setItem('marked', JSON.stringify(item));
+
+  },
+  unmark: function(id) {
+    if (!this.storageAvailable())
+      return;
+
+    var storage = window.localStorage;
+    var item = storage.getItem('marked');
+
+    if (item === null)
+      return;
+
+    var obj = JSON.parse(item);
+    delete obj[id];
+    storage.setItem('marked', JSON.stringify(obj));
+  },
+  clearMarks: function() {
+    if (!this.storageAvailable())
+      return;
+
+    var storage = window.localStorage;
+    var item = storage.getItem('marked');
+
+    if (item === null)
+      return;
+
+    var marked = JSON.parse(item);
+
+    for(var key in marked) {
+      var result = storage.getItem(key);
+
+      if (result == null || !result.match(/^{.*}$/))
+        continue;
+
+      result = JSON.parse(result);
+
+      if (!result.w)
+        continue;
+
+      if (result.w != 1) {
+        var played = Date.UTC(
+          result.w.substr(0,4),
+          result.w.substr(5,2) - 1,
+          result.w.substr(8,2),
+          result.w.substr(11,2),
+          result.w.substr(14,2),
+          result.w.substr(17,2)
+        );
+
+        if (marked[key] - 2629746000 < played) {
+          delete marked[key];
+          storage.setItem('marked', JSON.stringify(marked));
+        }
+      }
+      else if (result.w == '1') {
+        delete marked[key];
+        storage.setItem('marked', JSON.stringify(marked));
+      }
+    }
   }
 };
 
@@ -111,15 +240,22 @@ var Templates = {
       color: "#120c0c",
       background: "#ffdd6f"
     },
+    mark: {
+      color: "#120c0c",
+      background: "#93d7ff",
+      marginLeft: "5px",
+    }
   },
   messages: {
     unknown: {
       text: 'Unknown',
       type: 'unknown'
     },
-    banned: {
-      text: 'Banned',
-      type: 'error'
+    banned: function(reason){
+      return{
+        text: 'Banned: ' + reason,
+        type: 'error'
+      }
     },
     overplayed: {
       text: 'Overplayed',
@@ -194,9 +330,9 @@ var Templates = {
       display: "inline-block",
       color: "white",
       fontSize: "15px",
+      top: "1px",
       marginLeft: "5px",
       position: "relative",
-      top: "-3px",
       padding: "4px 8px",
       borderRadius: "4px",
       verticalAlign: "bottom",
@@ -205,18 +341,108 @@ var Templates = {
       cursor: "pointer"
     }
   },
+  markButton: $('<button id="mark-btn" class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity no-icon-markup pause-resume-autoplay action-panel-trigger  yt-uix-tooltip" type="button" onclick=";return false;" title="Mark " data-tooltip-text="Mark " aria-labelledby="yt-uix-tooltip133-arialabel"><span class="yt-uix-button-content">Mark </span></button>').css("margin-left", "5px"),
+  unmarkButton: $('<button id="unmark-btn" class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity no-icon-markup pause-resume-autoplay action-panel-trigger  yt-uix-tooltip" type="button" onclick=";return false;" title="Mark " data-tooltip-text="Unmark " aria-labelledby="yt-uix-tooltip133-arialabel"><span class="yt-uix-button-content">Unmark </span></button>').css("margin-left", "5px"),
   checkButton: $('<a class="yt-uix-button yt-uix-sessionlink yt-uix-button-default yt-uix-button-size-default" id="check-btn"><span class="yt-uix-button-content" style="vertical-align: middle;">Check</span></a>').css({
     marginRight: "10px",
     paddingLeft: "15px",
     paddingRight: "15px"
-  })
+  }),
 }
 
 var Youtube = {
   insertCheckButton: function() {
     $('#yt-masthead-user').prepend(Templates.checkButton);
     $('#yt-masthead-signin').prepend(Templates.checkButton);
-    return $('#check-btn');
+    $('#check-btn').on('click', Youtube.onCheckClick);
+  },
+  insertMarkButton: function() {
+    $('#watch8-secondary-actions').append(Templates.markButton);
+    $('#watch8-secondary-actions').append(Templates.unmarkButton);
+
+    $('#mark-btn').off('click');
+    $('#unmark-btn').off('click');
+
+    var videoElem = $('link[href*="watch"][itemprop="url"]');
+
+    if (videoElem.length > 0)
+      var id = videoElem[0].href.match(/watch\?v=([^&]*)/)[1];
+
+    $('#mark-btn').on('click', function(e) { Youtube.mark(id,videoElem[0],e)});
+    $('#unmark-btn').on('click', function(e) { Youtube.unmark(id,videoElem[0],e)});
+
+    Youtube.toggleMarkButtons(id);
+  },
+  onTransition: function(event) {
+    if (event.propertyName !== 'transform' && event.propertyName !== 'width')
+      return;
+
+    if (event.target.id !== 'progress' && event.target.className !=='ytp-load-progress')
+      return
+
+    if ($('#mark-btn').length > 0)
+      return
+
+    Youtube.insertMarkButton();
+  },
+  onCheckClick: function(event) {
+    Cache.clearExpired();
+    Cache.clearMarks();
+    $('.ongaku-label').remove();
+
+    var elems = Youtube.getVideoElems();
+    var IDs = Youtube.parseIDs(elems);
+    var uniqueIDs = Youtube.filterDuplicates(IDs);
+    var cacheResults = Cache.getResults(IDs);
+    var IDsToCheck = Youtube.filterResults(uniqueIDs, cacheResults);
+    var markIDs = Cache.getMarks();
+    var markIDsToCheck = Youtube.filterMarks(uniqueIDs, markIDs);
+    IDsToCheck = IDsToCheck.concat(markIDsToCheck);
+
+    Youtube.insertLabels(elems, IDs, cacheResults, true);
+
+    if (window.timeout)
+      return;
+
+    window.timeout = true;
+    setTimeout(function() {
+      window.timeout = false;
+    }, 3000);
+
+    Youtube.enqueue(IDsToCheck, function(IDChunk) {
+      Youtube.checkRestrictions(IDChunk, function(results) {
+        Youtube.insertLabels(elems, IDs, results);
+
+        Cache.storeResults(results, 604800000) // 1 week
+        IDsToCheck = Youtube.filterResults(IDChunk, results);
+
+        Youtube.checkStatus(IDsToCheck, function(results) {
+          Youtube.insertLabels(elems, IDs, results);
+
+          Cache.storeResults(results, 86400000); // 24 hours
+        });
+      });
+    });
+  },
+  toggleMarkButtons: function(id) {
+    if (Cache.hasMark(id)) {
+      $('#unmark-btn').show();
+      $('#mark-btn').hide();
+    }
+    else {
+      $('#mark-btn').show();
+      $('#unmark-btn').hide();
+    }
+  },
+  mark: function(id, elem, event) {
+    Cache.mark(id);
+    this.appendLabel(elem, Cache.getResult(id), id, true);
+    this.toggleMarkButtons(id);
+  },
+  unmark: function(id, elem, event) {
+    Cache.unmark(id);
+    $('[cache=' + id + '].ongaku-mark').remove();
+    this.toggleMarkButtons(id);
   },
   getVideoElems: function() {
     var selectors = [
@@ -233,51 +459,65 @@ var Youtube = {
       return elem.href.match(/watch\?v=([^&]*)/)[1];
     }).toArray();
   },
-  insertLabels: function(elems, IDs, results) {
+  insertLabels: function(elems, IDs, results, cache) {
     if ($.isEmptyObject(results))
       return;
 
     elems.each(function(index, elem) {
       var id = IDs[index];
       if (results[id])
-        this.appendLabel(elem, results[id]);
+        this.appendLabel(elem, results[id], id, cache);
+
     }.bind(this));
   },
   insertUnknownLabels: function(elems, IDs) {
     elems.each(function(index, elem) {
       var id = IDs[index];
-      this.appendLabel(elem, {status: "unknown"});
+      this.appendLabel(elem, {status: "unknown"}, id);
     });
   },
-  appendLabel: function(elem, result) {
+  appendLabel: function(elem, result, id, cache) {
+    $('[cache=' + id + ']').remove();
+
     if ($(elem).hasClass('yt-ui-ellipsis')) {
-      var label = this.createLabel(result, Templates.labels.labelWide);
+      var label = this.createLabel(result, Templates.labels.labelWide, id, cache);
       var margin = 34 - $(elem).height();
-      label.css("marginTop",margin + "px");
-      $(label).insertAfter($(elem).parent().parent().find('.yt-lockup-meta'));
+
+      if (Array.isArray(label)) {
+        label[0].css("marginTop", margin + "px");
+        label[1].css("marginLeft", "0px");
+      }
+      else
+        label.css("marginTop",margin + "px");
+
+      // $(label).insertAfter($(elem).parent().parent().find('.yt-lockup-meta'));
+      $(elem).parent().parent().append(label);
     }
     else if ($(elem).hasClass('content-link')) {
-      var label = this.createLabel(result, Templates.labels.labelSmall);
-      // $(elem).children().first().prepend(label);
-      // $(elem).find('.view-count').append(label);
-      label.insertAfter($(elem).find('.view-count'));
+      var label = this.createLabel(result, Templates.labels.labelSmall, id, cache);
+      // $(label).insertAfter($(elem).find('.view-count'));
+      $(elem).append(label);
     }
     else if ($(elem).hasClass('pl-video-title-link')) {
-      var label = this.createLabel(result, Templates.labels.labelNormal);
+      var label = this.createLabel(result, Templates.labels.labelNormal, id, cache);
       $(elem).parent().append(label);
     }
     else if ($(elem).hasClass('playlist-video')) {
-      var label = this.createLabel(result, Templates.labels.labelNormal);
+      var label = this.createLabel(result, Templates.labels.labelNormal, id, cache);
       $(elem).find('.video-uploader-byline').append(label);
     }
     else if (elem.tagName == 'LINK') {
-      var label = this.createLabel(result, Templates.labels.labelLarge);
+      var label = this.createLabel(result, Templates.labels.labelLarge, id, cache);
       $('#eow-title').append(label);
     }
   },
-  createLabel: function(result, labelType) {
+  createLabel: function(result, labelType, id, cache) {
     var verdict = this.getVerdict(result);
     var elem = $('<span class="ongaku-label"></span>');
+
+    if (cache)
+      elem.attr('cache',id);
+
     elem.css(labelType);
     elem.text(verdict.text);
 
@@ -299,6 +539,19 @@ var Youtube = {
     });
 
     elem.css(Templates.styles[verdict.type]);
+
+    if (Cache.hasMark(id)) {
+      var markElem = $('<span class="ongaku-label">Marked</span>');
+      markElem.css(labelType);
+      markElem.css(Templates.styles.mark);
+      markElem.addClass('ongaku-mark')
+
+      if (cache)
+        markElem.attr('cache',id);
+
+      return [elem, markElem];
+    }
+
     return elem;
   },
   getVerdict: function(result) {
@@ -306,7 +559,7 @@ var Youtube = {
     if (result.status == 'deleted') return Templates.messages.unavailable('Deleted');
     if (result.status == 'blocked') return Templates.messages.unavailable('Blocked in too many regions');
     if (result.status == 'unembeddable') return Templates.messages.unavailable('Not embeddable');
-    if (result.b == 1) return Templates.messages.banned;
+    if (result.b == 1) return Templates.messages.banned(result.r);
     if (result.o > 0) return Templates.messages.overplayed;
     if (result.t == 1) return Templates.messages.today;
     if (result.w == 1) return Templates.messages.week;
@@ -318,7 +571,7 @@ var Youtube = {
     return Templates.messages.error;
   },
   enqueue: function(IDs, callback) {
-    var IDsToCheck = $.extend([], IDs);
+    var IDsToCheck = $.extend([], IDs.slice(0,200));
     while(IDsToCheck.length) {
       // Max of 50 songs per request
       callback(IDsToCheck.splice(0,50));
@@ -377,7 +630,15 @@ var Youtube = {
 
     return IDs.filter(function(id) {
       return !results[id];
-    })
+    });
+  },
+  filterMarks: function(IDs, results) {
+    if (results == undefined)
+      return [];
+
+    return IDs.filter(function(id) {
+      return results[id];
+    });
   },
   filterDuplicates: function(list) {
     return list.filter(function(elem, index, self) {
@@ -444,33 +705,9 @@ var Youtube = {
   }
 };
 
+Cache.clearMarks();
 window.Cache = Cache;
 Cache.clearExpired();
-
-Youtube.insertCheckButton().on('click', function() {
-  Cache.clearExpired();
-  $('.ongaku-label').remove();
-
-  var elems = Youtube.getVideoElems();
-  var IDs = Youtube.parseIDs(elems);
-  var uniqueIDs = Youtube.filterDuplicates(IDs);
-  var cacheResults = Cache.getResults(IDs);
-  var IDsToCheck = Youtube.filterResults(uniqueIDs, cacheResults);
-
-  Youtube.insertLabels(elems, IDs, cacheResults);
-
-  Youtube.enqueue(IDsToCheck, function(IDChunk) {
-    Youtube.checkRestrictions(IDChunk, function(results) {
-      Youtube.insertLabels(elems, IDs, results);
-
-      Cache.storeResults(results, 604800000) // 1 week
-      IDsToCheck = Youtube.filterResults(IDChunk, results);
-
-      Youtube.checkStatus(IDsToCheck, function(results) {
-        Youtube.insertLabels(elems, IDs, results);
-
-        Cache.storeResults(results, 86400000); // 24 hours
-      });
-    });
-  });
-});
+Youtube.insertMarkButton();
+window.addEventListener('transitionend', Youtube.onTransition, true);
+Youtube.insertCheckButton();
