@@ -251,9 +251,11 @@ var Templates = {
       text: 'Unknown',
       type: 'unknown'
     },
-    banned: {
-      text: 'Banned',
-      type: 'error'
+    banned: function(reason){
+      return{
+        text: 'Banned: ' + reason,
+        type: 'error'
+      }
     },
     overplayed: {
       text: 'Overplayed',
@@ -557,7 +559,7 @@ var Youtube = {
     if (result.status == 'deleted') return Templates.messages.unavailable('Deleted');
     if (result.status == 'blocked') return Templates.messages.unavailable('Blocked in too many regions');
     if (result.status == 'unembeddable') return Templates.messages.unavailable('Not embeddable');
-    if (result.b == 1) return Templates.messages.banned;
+    if (result.b == 1) return Templates.messages.banned(result.r);
     if (result.o > 0) return Templates.messages.overplayed;
     if (result.t == 1) return Templates.messages.today;
     if (result.w == 1) return Templates.messages.week;
