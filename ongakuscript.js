@@ -100,16 +100,6 @@ var Cache = {
       return storage.getItem(id) !== null;
     });
   },
-  getUncached: function(IDs) {
-    if (!this.storageAvailable())
-      return;
-
-    var storage = window.localStorage;
-
-    return IDs.filter(function(id) {
-      return storage.getItem(id) == null;
-    });
-  },
   getMarks: function() {
     if (!this.storageAvailable())
       return;
