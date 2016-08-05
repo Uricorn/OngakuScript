@@ -18,16 +18,6 @@ var Cache = {
     var storage = window.localStorage;
     var marked = storage.getItem('marked');
 
-    if (marked !== null) {
-      var obj = JSON.parse(marked);
-
-      for(var key in obj) {
-        if (Date.now() > obj[key])
-          delete obj[key];
-      }
-      storage.setItem('marked', JSON.stringify(obj));
-    }
-
     for(var key in storage) {
       var item = storage.getItem(key);
       if (item !== null && item.match(/^{.*}$/)) {
@@ -144,7 +134,7 @@ var Cache = {
     else
       item = {};
 
-    item[id] = Date.now() + 2629746000; // 1 month
+    item[id] = 1;
     storage.setItem('marked', JSON.stringify(item));
 
   },
@@ -161,50 +151,6 @@ var Cache = {
     var obj = JSON.parse(item);
     delete obj[id];
     storage.setItem('marked', JSON.stringify(obj));
-  },
-  clearMarks: function() {
-    if (!this.storageAvailable())
-      return;
-
-    var storage = window.localStorage;
-    var item = storage.getItem('marked');
-
-    if (item === null)
-      return;
-
-    var marked = JSON.parse(item);
-
-    for(var key in marked) {
-      var result = storage.getItem(key);
-
-      if (result == null || !result.match(/^{.*}$/))
-        continue;
-
-      result = JSON.parse(result);
-
-      if (!result.w)
-        continue;
-
-      if (result.w != 1) {
-        var played = Date.UTC(
-          result.w.substr(0,4),
-          result.w.substr(5,2) - 1,
-          result.w.substr(8,2),
-          result.w.substr(11,2),
-          result.w.substr(14,2),
-          result.w.substr(17,2)
-        );
-
-        if (marked[key] - 2629746000 < played) {
-          delete marked[key];
-          storage.setItem('marked', JSON.stringify(marked));
-        }
-      }
-      else if (result.w == '1') {
-        delete marked[key];
-        storage.setItem('marked', JSON.stringify(marked));
-      }
-    }
   }
 };
 
@@ -376,7 +322,6 @@ var Youtube = {
   },
   onCheckClick: function(event) {
     Cache.clearExpired();
-    Cache.clearMarks();
     $('.ongaku-label').remove();
 
     var elems = Youtube.getVideoElems();
@@ -694,7 +639,6 @@ var Youtube = {
   }
 };
 
-Cache.clearMarks();
 window.Cache = Cache;
 Cache.clearExpired();
 Youtube.insertMarkButton();
