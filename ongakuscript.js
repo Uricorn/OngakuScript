@@ -415,16 +415,17 @@ var Youtube = {
 
     if ($(elem).hasClass('yt-ui-ellipsis')) {
       var label = this.createLabel(result, Templates.labels.labelWide, id, cache);
-      var margin = 34 - $(elem).height();
+      if (window.location.pathname !== "/results") {
+        var margin = 34 - $(elem).height();
 
-      if (Array.isArray(label)) {
-        label[0].css("marginTop", margin + "px");
-        label[1].css("marginLeft", "0px");
+        if (Array.isArray(label)) {
+          label[0].css("marginTop", margin + "px");
+          label[1].css("marginLeft", "0px");
+        }
+        else
+          label.css("marginTop",margin + "px");
       }
-      else
-        label.css("marginTop",margin + "px");
 
-      // $(label).insertAfter($(elem).parent().parent().find('.yt-lockup-meta'));
       $(elem).parent().parent().append(label);
     }
     else if ($(elem).hasClass('content-link')) {
