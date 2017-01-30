@@ -9,7 +9,7 @@
 	}
 	$out = [];
 	$ret = 0;
-	exec('git pull 2>&1', $out, $ret)
+	exec('git pull 2>&1', $out, $ret);
 	if($ret != 0)
 		header('HTTP/1.1 500 Internal error');
 	echo join("\n", $out);
