@@ -52,6 +52,7 @@
   opacity: 0.9;
   height: 18px;
   font-size: 12px;
+  max-width: 165px;
 }
 
 .label:hover {
@@ -89,7 +90,6 @@
   box-sizing: border-box;
   padding: 4px 6px;
   display: inline-block;
-  /*max-width: calc(100% - 6px);*/
   font-size: 12px;
 }
 
