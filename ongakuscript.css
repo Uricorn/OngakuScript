@@ -1,0 +1,104 @@
+#check-button {
+  height: 2.2em;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background: linear-gradient(to bottom, #ffffff, rgba(255, 255, 255, 0)) 
+    left no-repeat, center no-repeat #f5f8fa;
+  color: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 1px 1px 0 rgba(31,45,61,.05);
+  border: 1px solid #e0e6ed;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  margin-right: 14px;
+}
+
+#check-button:focus, #check-button:active {
+  outline: none;
+}
+
+#check-button:active {
+  background: #e6e6e6;
+}
+
+#check-button:hover {
+  opacity: 0.8;
+}
+
+#check-button.disabled {
+  opacity: 0.5;
+  color: #333;
+  cursor: default;
+}
+
+#check-button.disabled:hover {
+  background: rgb(246,246,246);
+}
+
+.label {
+  position: absolute;
+  display: inline-flex;
+  top: 4px;
+  left: 4px;
+  font-size: 11px;
+  line-height: 11px;
+  vertical-align: center;
+  border-radius: 3px;
+  padding: 4px 6px;
+  color: #fff;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  opacity: 0.9;
+  height: 18px;
+  font-size: 12px;
+  max-width: 165px;
+}
+
+.label:hover {
+  white-space: wrap;
+  text-overflow: default;
+}
+
+.label-information {
+  color: #120c0c;
+  background: #aa74ff;
+}
+
+.label-error {
+  background: #c42e3b;
+}
+
+.label-soft-warning {
+  color: #120c0c;
+  background: #f3e115;
+}
+
+.label-unknown {
+  color: #120c0c;
+  background: #f8b2ea;
+}
+
+.label-warning {
+  color: #120c0c;
+  background: #ffdd6f;
+}
+
+.label-thumb {
+  position: absolute;
+  text-align: center;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  display: inline-block;
+  font-size: 12px;
+}
+
+.label-playlist {
+  position: absolute;
+  font-size: 14px;
+  right: 0px;
+}
+
+.label-main {
+  margin-left: 6px;
+}
