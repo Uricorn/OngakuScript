@@ -53,6 +53,12 @@ var OngakuScript = (function () {
   module.init = function () {
     Page.addEventListeners();
     Page.appendCheckButton(check);
+
+    var css = document.createElement('link');
+    css.rel = "stylesheet";
+    css.href = 'https://i.animemusic.me/ongakuscript.css';
+
+    document.querySelector('head').appendChild(css);
   };
 
   return module;
