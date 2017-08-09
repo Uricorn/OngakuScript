@@ -273,16 +273,20 @@ var Page = (function () {
     checkButton.setAttribute('id', 'check-button');
     checkButton.onclick = onCheckClick;
 
-    const newToolbar = document.querySelector('#end');
-    const oldToolbar = document.querySelector('#yt-masthead-signin,#yt-masthead-user')
+    const toolbarReady = setInterval(function () {
+      const newToolbar = document.querySelector('#end');
+      const oldToolbar = document.querySelector('#yt-masthead-signin,#yt-masthead-user')
 
-    if (oldToolbar) {
-      oldToolbar.insertBefore(checkButton, oldToolbar.firstElementChild)
-    }
+      if (oldToolbar) {
+        oldToolbar.insertBefore(checkButton, oldToolbar.firstElementChild)
+        clearInterval(toolbarReady)
+      }
 
-    if (newToolbar) {
-      newToolbar.parentNode.insertBefore(checkButton, newToolbar);
-    }
+      if (newToolbar) {
+        newToolbar.parentNode.insertBefore(checkButton, newToolbar);
+        clearInterval(toolbarReady)
+      }
+    }, 100)
   }
 
   module.addEventListeners = function () {
