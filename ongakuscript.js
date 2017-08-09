@@ -259,7 +259,7 @@ var Page = (function () {
   module.clearLabels = function () {
     document.querySelectorAll('.label').forEach(function (node) {
       node.remove();
-      node.addEventListener('click', onLabelClick);
+      node.removeEventListener('click', onLabelClick);
     });
   }
 
